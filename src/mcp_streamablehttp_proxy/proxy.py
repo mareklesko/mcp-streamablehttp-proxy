@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import os
 import subprocess
 import time
 from typing import Any, Dict, List, Optional
@@ -12,6 +13,14 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
+
+# Default stdio read buffer size: 10 MB.
+# MCP servers can return large JSON responses (e.g. tool listings, document content)
+# that exceed asyncio's default 64 KB StreamReader limit, causing:
+#   "Separator is found, but chunk is longer than limit"
+# Override via STDIO_BUFFER_SIZE env var (bytes).
+_DEFAULT_STDIO_BUFFER_SIZE = 10 * 1024 * 1024  # 10 MB
+STDIO_BUFFER_SIZE: int = int(os.getenv("STDIO_BUFFER_SIZE", str(_DEFAULT_STDIO_BUFFER_SIZE)))
 
 
 class MCPSession:
@@ -37,11 +46,15 @@ class MCPSession:
             f"Starting MCP server for session {self.session_id}: {' '.join(self.server_command)}",  # TODO: Break long line
         )
 
+        logger.debug(
+            f"Session {self.session_id}: Using stdio read buffer size: {STDIO_BUFFER_SIZE} bytes",
+        )
         self.process = await asyncio.create_subprocess_exec(
             *self.server_command,
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            limit=STDIO_BUFFER_SIZE,
         )
 
         # Start reading responses from the server

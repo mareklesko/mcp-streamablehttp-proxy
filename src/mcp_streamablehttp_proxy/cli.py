@@ -5,6 +5,8 @@ import logging
 import os
 import sys
 
+import mcp_streamablehttp_proxy.proxy as _proxy_module
+
 from .server import run_server
 
 logger = logging.getLogger(__name__)
@@ -54,6 +56,17 @@ Examples:
     )
 
     parser.add_argument(
+        "--read-buffer-size",
+        type=int,
+        default=int(os.getenv("STDIO_BUFFER_SIZE", str(10 * 1024 * 1024))),
+        help=(
+            "Size of the stdio read buffer in bytes (default: 10485760 = 10 MB, "
+            "or STDIO_BUFFER_SIZE env var). Increase this if you see "
+            "'Separator is found, but chunk is longer than limit' errors."
+        ),
+    )
+
+    parser.add_argument(
         "--log-level",
         choices=["debug", "info", "warning", "error"],
         default="info",
@@ -73,6 +86,10 @@ Examples:
             full_server_command = unknown
 
     try:
+        # Apply buffer size override before starting server
+        _proxy_module.STDIO_BUFFER_SIZE = args.read_buffer_size
+        logger.debug(f"stdio read buffer size set to {args.read_buffer_size} bytes")
+
         run_server(
             server_command=full_server_command,
             host=args.host,

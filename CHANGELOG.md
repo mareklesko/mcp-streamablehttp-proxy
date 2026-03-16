@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **`ValueError: Separator is found, but chunk is longer than limit`** – MCP servers that return
+  large JSON responses (e.g. Proxmox VM lists, Paperless document content, Linear issue dumps)
+  could exceed asyncio's default 64 KB `StreamReader` buffer, killing the session. The subprocess
+  stdout stream is now created with a **10 MB** buffer by default.
+
+### Added
+- `STDIO_BUFFER_SIZE` env var (bytes) to override the read buffer size at runtime.
+- `--read-buffer-size` CLI flag (bytes) for the same purpose, e.g.
+  `mcp-streamablehttp-proxy --read-buffer-size 20971520 npx @modelcontextprotocol/server-memory`.
+
 ## [0.1.0] - 2024-XX-XX
 
 ### Added
